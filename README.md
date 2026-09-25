@@ -57,3 +57,19 @@ VITE_API_URL=http://127.0.0.1:8000
 ```
 
 See `.env.example` for all supported variables.
+
+## Extras
+
+### AI prompt
+- Prompt file: `prompts/asset-tagging.md`
+- Used by Gemini for tag / description / usage suggestions (review before save)
+
+### n8n webhook (optional)
+- Set `N8N_WEBHOOK_URL` to your n8n Production webhook URL (empty = disabled)
+- Events: `ai.tag_suggestion.saved`, `asset.restored`, `brand.updated`
+- Payload: `event`, `asset_id`, `brand_id`, `user_email`, `timestamp`
+- Workflow export: `n8n/brandvault-webhook.json` (import into n8n)
+
+### Postman
+- Collection: `postman/BrandVault.postman_collection.json`
+- Import into Postman and set the collection base URL to your API (e.g. `http://127.0.0.1:8000`)
