@@ -8,6 +8,7 @@ use App\Http\Requests\StoreBrandRequest;
 use App\Http\Requests\UpdateBrandRequest;
 use App\Http\Requests\UploadBrandLogoRequest;
 use App\Http\Resources\BrandResource;
+use App\Services\ActivityLogService;
 use App\Services\BrandService;
 use App\Services\WebhookService;
 use Illuminate\Http\JsonResponse;
@@ -20,6 +21,7 @@ class BrandController extends Controller
     public function __construct(
         private BrandService $brandService,
         private WebhookService $webhookService,
+        private ActivityLogService $activityLogService,
     ) {}
 
     public function show(Request $request): JsonResponse
@@ -37,9 +39,18 @@ class BrandController extends Controller
 
     public function store(StoreBrandRequest $request): JsonResponse
     {
-        $brand = $this->brandService->create(
-            $this->workspace($request),
-            $request->validated()
+        $workspace = $this->workspace($request);
+        $user = $request->user();
+
+        $brand = $this->brandService->create($workspace, $request->validated());
+
+        $this->activityLogService->log(
+            $workspace,
+            $user,
+            'brand.created',
+            $this->activityLogService->byUser('created', 'Brand “'.$brand->name.'”', $user),
+            'brand',
+            $brand->id,
         );
 
         return response()->json([
@@ -49,16 +60,25 @@ class BrandController extends Controller
 
     public function update(UpdateBrandRequest $request): JsonResponse
     {
-        $brand = $this->brandService->update(
-            $this->workspace($request),
-            $request->validated()
+        $workspace = $this->workspace($request);
+        $user = $request->user();
+
+        $brand = $this->brandService->update($workspace, $request->validated());
+
+        $this->activityLogService->log(
+            $workspace,
+            $user,
+            'brand.updated',
+            $this->activityLogService->byUser('updated', 'Brand “'.$brand->name.'”', $user),
+            'brand',
+            $brand->id,
         );
 
         $this->webhookService->dispatch(
             WebhookService::EVENT_BRAND_UPDATED,
             null,
             $brand->id,
-            (string) $request->user()->email,
+            (string) $user->email,
         );
 
         return response()->json([
@@ -68,16 +88,25 @@ class BrandController extends Controller
 
     public function uploadLogo(UploadBrandLogoRequest $request): JsonResponse
     {
-        $brand = $this->brandService->uploadLogo(
-            $this->workspace($request),
-            $request->file('logo')
+        $workspace = $this->workspace($request);
+        $user = $request->user();
+
+        $brand = $this->brandService->uploadLogo($workspace, $request->file('logo'));
+
+        $this->activityLogService->log(
+            $workspace,
+            $user,
+            'brand.logo_uploaded',
+            'Logo uploaded for brand “'.$brand->name.'” by '.($user->email ?? 'a user'),
+            'brand',
+            $brand->id,
         );
 
         $this->webhookService->dispatch(
             WebhookService::EVENT_BRAND_UPDATED,
             null,
             $brand->id,
-            (string) $request->user()->email,
+            (string) $user->email,
         );
 
         return response()->json([

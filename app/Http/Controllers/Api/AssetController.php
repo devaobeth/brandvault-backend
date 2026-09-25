@@ -8,6 +8,7 @@ use App\Http\Requests\StoreAssetRequest;
 use App\Http\Requests\SuggestAssetTagsRequest;
 use App\Http\Requests\UpdateAssetRequest;
 use App\Http\Resources\AssetResource;
+use App\Services\ActivityLogService;
 use App\Services\AssetAiService;
 use App\Services\AssetService;
 use App\Services\FolderService;
@@ -27,6 +28,7 @@ class AssetController extends Controller
         private FolderService $folderService,
         private AssetAiService $assetAiService,
         private WebhookService $webhookService,
+        private ActivityLogService $activityLogService,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -54,18 +56,36 @@ class AssetController extends Controller
     public function store(StoreAssetRequest $request): JsonResponse
     {
         $workspace = $this->workspace($request);
+        $user = $request->user();
         $data = $request->validated();
 
         $asset = $request->hasFile('file')
             ? $this->assetService->create($workspace, $data, $request->file('file'))
             : $this->assetService->createFromUrl($workspace, $data);
 
+        $this->activityLogService->log(
+            $workspace,
+            $user,
+            'asset.created',
+            $this->activityLogService->byUser('created', 'Asset “'.$asset->name.'”', $user),
+            'asset',
+            $asset->id,
+        );
+
         if ($this->webhookService->looksLikeAiTagSave($data)) {
+            $this->activityLogService->log(
+                $workspace,
+                $user,
+                'ai.tag_suggestion.saved',
+                $this->activityLogService->byUser('saved with AI tags', 'Asset “'.$asset->name.'”', $user),
+                'asset',
+                $asset->id,
+            );
             $this->webhookService->dispatch(
                 WebhookService::EVENT_AI_TAG_SAVED,
                 $asset->id,
                 null,
-                (string) $request->user()->email,
+                (string) $user->email,
             );
         }
 
@@ -76,21 +96,40 @@ class AssetController extends Controller
 
     public function update(UpdateAssetRequest $request, int $id): JsonResponse
     {
+        $workspace = $this->workspace($request);
+        $user = $request->user();
         $data = $request->validated();
 
         $asset = $this->assetService->update(
-            $this->workspace($request),
+            $workspace,
             $id,
             $data,
             $request->file('file')
         );
 
+        $this->activityLogService->log(
+            $workspace,
+            $user,
+            'asset.updated',
+            $this->activityLogService->byUser('updated', 'Asset “'.$asset->name.'”', $user),
+            'asset',
+            $asset->id,
+        );
+
         if ($this->webhookService->looksLikeAiTagSave($data)) {
+            $this->activityLogService->log(
+                $workspace,
+                $user,
+                'ai.tag_suggestion.saved',
+                $this->activityLogService->byUser('saved with AI tags', 'Asset “'.$asset->name.'”', $user),
+                'asset',
+                $asset->id,
+            );
             $this->webhookService->dispatch(
                 WebhookService::EVENT_AI_TAG_SAVED,
                 $asset->id,
                 null,
-                (string) $request->user()->email,
+                (string) $user->email,
             );
         }
 
@@ -101,9 +140,18 @@ class AssetController extends Controller
 
     public function trash(Request $request, int $id): JsonResponse
     {
-        $asset = $this->assetService->trash(
-            $this->workspace($request),
-            $id
+        $workspace = $this->workspace($request);
+        $user = $request->user();
+
+        $asset = $this->assetService->trash($workspace, $id);
+
+        $this->activityLogService->log(
+            $workspace,
+            $user,
+            'asset.trashed',
+            $this->activityLogService->byUser('trashed', 'Asset “'.$asset->name.'”', $user),
+            'asset',
+            $asset->id,
         );
 
         return response()->json([
@@ -114,16 +162,25 @@ class AssetController extends Controller
 
     public function restore(Request $request, int $id): JsonResponse
     {
-        $asset = $this->assetService->restore(
-            $this->workspace($request),
-            $id
+        $workspace = $this->workspace($request);
+        $user = $request->user();
+
+        $asset = $this->assetService->restore($workspace, $id);
+
+        $this->activityLogService->log(
+            $workspace,
+            $user,
+            'asset.restored',
+            $this->activityLogService->byUser('restored', 'Asset “'.$asset->name.'”', $user),
+            'asset',
+            $asset->id,
         );
 
         $this->webhookService->dispatch(
             WebhookService::EVENT_ASSET_RESTORED,
             $asset->id,
             null,
-            (string) $request->user()->email,
+            (string) $user->email,
         );
 
         return response()->json([
@@ -134,9 +191,20 @@ class AssetController extends Controller
 
     public function destroy(Request $request, int $id): JsonResponse
     {
-        $this->assetService->forceDelete(
-            $this->workspace($request),
-            $id
+        $workspace = $this->workspace($request);
+        $user = $request->user();
+        $asset = $this->assetService->findTrashedInWorkspace($workspace, $id);
+        $name = $asset->name;
+
+        $this->assetService->forceDelete($workspace, $id);
+
+        $this->activityLogService->log(
+            $workspace,
+            $user,
+            'asset.deleted',
+            $this->activityLogService->byUser('permanently deleted', 'Asset “'.$name.'”', $user),
+            'asset',
+            $id,
         );
 
         return response()->json([
@@ -147,13 +215,22 @@ class AssetController extends Controller
     public function emptyTrash(Request $request): JsonResponse
     {
         $workspace = $this->workspace($request);
+        $user = $request->user();
 
         $folderCount = $this->folderService->emptyTrash($workspace);
         $assetCount = $this->assetService->emptyTrash($workspace);
+        $deleted = $folderCount + $assetCount;
+
+        $this->activityLogService->log(
+            $workspace,
+            $user,
+            'trash.emptied',
+            'Trash emptied by '.($user->email ?? 'a user').' ('.$deleted.' item'.($deleted === 1 ? '' : 's').')',
+        );
 
         return response()->json([
             'message' => 'Trash emptied.',
-            'deleted' => $folderCount + $assetCount,
+            'deleted' => $deleted,
         ]);
     }
 

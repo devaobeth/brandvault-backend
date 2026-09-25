@@ -54,5 +54,5 @@ RUN ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default \
 
 EXPOSE 10000
 
-# Render: env vars injected at runtime. Cache config after boot when APP_KEY is present.
-CMD ["sh", "-c", "php-fpm -D && php artisan config:cache || true && php artisan route:cache || true && php artisan storage:link || true && nginx -g 'daemon off;'"]
+# Render: env vars at runtime. Migrate only (no seed) on each start.
+CMD ["sh", "-c", "php-fpm -D && php artisan config:cache || true && php artisan route:cache || true && php artisan migrate --force || true && php artisan storage:link || true && nginx -g 'daemon off;'"]

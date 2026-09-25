@@ -30,4 +30,9 @@ class Workspace extends Model
     {
         return $this->hasMany(Asset::class);
     }
+
+    public function activityLogs(): HasMany
+    {
+        return $this->hasMany(ActivityLog::class);
+    }
 }
