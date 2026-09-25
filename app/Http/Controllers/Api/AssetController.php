@@ -11,6 +11,7 @@ use App\Http\Resources\AssetResource;
 use App\Services\AssetAiService;
 use App\Services\AssetService;
 use App\Services\FolderService;
+use App\Services\WebhookService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -25,6 +26,7 @@ class AssetController extends Controller
         private AssetService $assetService,
         private FolderService $folderService,
         private AssetAiService $assetAiService,
+        private WebhookService $webhookService,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -58,6 +60,15 @@ class AssetController extends Controller
             ? $this->assetService->create($workspace, $data, $request->file('file'))
             : $this->assetService->createFromUrl($workspace, $data);
 
+        if ($this->webhookService->looksLikeAiTagSave($data)) {
+            $this->webhookService->dispatch(
+                WebhookService::EVENT_AI_TAG_SAVED,
+                $asset->id,
+                null,
+                (string) $request->user()->email,
+            );
+        }
+
         return response()->json([
             'asset' => new AssetResource($asset),
         ], 201);
@@ -65,12 +76,23 @@ class AssetController extends Controller
 
     public function update(UpdateAssetRequest $request, int $id): JsonResponse
     {
+        $data = $request->validated();
+
         $asset = $this->assetService->update(
             $this->workspace($request),
             $id,
-            $request->validated(),
+            $data,
             $request->file('file')
         );
+
+        if ($this->webhookService->looksLikeAiTagSave($data)) {
+            $this->webhookService->dispatch(
+                WebhookService::EVENT_AI_TAG_SAVED,
+                $asset->id,
+                null,
+                (string) $request->user()->email,
+            );
+        }
 
         return response()->json([
             'asset' => new AssetResource($asset),
@@ -95,6 +117,13 @@ class AssetController extends Controller
         $asset = $this->assetService->restore(
             $this->workspace($request),
             $id
+        );
+
+        $this->webhookService->dispatch(
+            WebhookService::EVENT_ASSET_RESTORED,
+            $asset->id,
+            null,
+            (string) $request->user()->email,
         );
 
         return response()->json([

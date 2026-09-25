@@ -41,4 +41,8 @@ return [
         'base' => env('GEMINI_API_BASE', 'https://generativelanguage.googleapis.com/v1beta'),
     ],
 
+    'n8n' => [
+        'webhook_url' => env('N8N_WEBHOOK_URL'),
+    ],
+
 ];

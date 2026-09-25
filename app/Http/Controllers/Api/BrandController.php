@@ -9,6 +9,7 @@ use App\Http\Requests\UpdateBrandRequest;
 use App\Http\Requests\UploadBrandLogoRequest;
 use App\Http\Resources\BrandResource;
 use App\Services\BrandService;
+use App\Services\WebhookService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -16,7 +17,10 @@ class BrandController extends Controller
 {
     use ResolvesWorkspace;
 
-    public function __construct(private BrandService $brandService) {}
+    public function __construct(
+        private BrandService $brandService,
+        private WebhookService $webhookService,
+    ) {}
 
     public function show(Request $request): JsonResponse
     {
@@ -50,6 +54,13 @@ class BrandController extends Controller
             $request->validated()
         );
 
+        $this->webhookService->dispatch(
+            WebhookService::EVENT_BRAND_UPDATED,
+            null,
+            $brand->id,
+            (string) $request->user()->email,
+        );
+
         return response()->json([
             'brand' => new BrandResource($brand),
         ]);
@@ -60,6 +71,13 @@ class BrandController extends Controller
         $brand = $this->brandService->uploadLogo(
             $this->workspace($request),
             $request->file('logo')
+        );
+
+        $this->webhookService->dispatch(
+            WebhookService::EVENT_BRAND_UPDATED,
+            null,
+            $brand->id,
+            (string) $request->user()->email,
         );
 
         return response()->json([
