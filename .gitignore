@@ -1,0 +1,66 @@
+*.log
+.DS_Store
+Thumbs.db
+
+# Environment & secrets (assignment: never commit secrets)
+.env
+.env.*
+!.env.example
+.env.backup
+.env.production
+.env.local
+auth.json
+
+# Dependencies
+/vendor
+/node_modules
+
+# Laravel runtime / build artifacts
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/storage/pail
+/storage/logs/*
+!/storage/logs/.gitignore
+/storage/framework/cache/data/*
+!/storage/framework/cache/data/.gitignore
+/storage/framework/sessions/*
+!/storage/framework/sessions/.gitignore
+/storage/framework/testing/*
+!/storage/framework/testing/.gitignore
+/storage/framework/views/*
+!/storage/framework/views/.gitignore
+/bootstrap/cache/*.php
+!/bootstrap/cache/.gitignore
+
+# PHP / testing
+.phpactor.json
+.phpunit.result.cache
+/.phpunit.cache
+phpunit.xml.bak
+_ide_helper.php
+_ide_helper_models.php
+.phpstorm.meta.php
+
+# Homestead / Sail
+Homestead.json
+Homestead.yaml
+docker-compose.override.yml
+
+# Editors & AI tooling
+/.idea
+/.vscode
+/.nova
+/.zed
+/.fleet
+/.cursor
+/.codex
+*.swp
+*.swo
+*~
+
+# OS
+.AppleDouble
+.LSOverride
+Icon

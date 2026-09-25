@@ -1,0 +1,534 @@
+{
+  "info": {
+    "_postman_id": "brandvault-api-collection",
+    "name": "BrandVault API",
+    "description": "BrandVault backend API — Auth, Brand Kit, Folders, Assets, Trash/Restore.\n\n1. Set `baseUrl` (default http://127.0.0.1:8000).\n2. Run Auth → Login (demo) or Register — token is saved to `token`.\n3. Other requests use Bearer {{token}}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "folderId",
+      "value": ""
+    },
+    {
+      "key": "childFolderId",
+      "value": ""
+    },
+    {
+      "key": "assetId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.token) pm.collectionVariables.set('token', data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Password1!\",\n  \"password_confirmation\": \"Password1!\"\n}"
+            },
+            "url": "{{baseUrl}}/api/register",
+            "description": "Create user + workspace + Sanctum token."
+          }
+        },
+        {
+          "name": "Login (Demo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.token) pm.collectionVariables.set('token', data.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"demo@brandvault.dev\",\n  \"password\": \"Demo1234!\"\n}"
+            },
+            "url": "{{baseUrl}}/api/login",
+            "description": "Demo account. Saves token to collection variable."
+          }
+        },
+        {
+          "name": "Me",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/me",
+            "description": "Current user + workspace."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/logout",
+            "description": "Revoke current token."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Brand",
+      "item": [
+        {
+          "name": "Get Brand",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/brand"
+          }
+        },
+        {
+          "name": "Create Brand",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"BrandVault Demo\",\n  \"primary_color\": \"#1A73E8\",\n  \"secondary_color\": \"#34A853\",\n  \"logo_url\": \"https://example.com/logo.png\",\n  \"default_font\": \"Inter\"\n}"
+            },
+            "url": "{{baseUrl}}/api/brand",
+            "description": "One brand per workspace. 422 if already exists."
+          }
+        },
+        {
+          "name": "Update Brand",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "PATCH",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"BrandVault Updated\",\n  \"primary_color\": \"#0D47A1\",\n  \"secondary_color\": \"#2E7D32\",\n  \"logo_url\": \"https://example.com/logo-v2.png\",\n  \"default_font\": \"Roboto\"\n}"
+            },
+            "url": "{{baseUrl}}/api/brand"
+          }
+        },
+        {
+          "name": "Upload Brand Logo",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "logo",
+                  "type": "file",
+                  "src": [],
+                  "description": "Image file (jpg, png, webp, gif, svg). Max 2MB. Brand must exist first."
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/brand/logo",
+            "description": "Multipart upload. Saves to storage/app/public/brands/{workspace_id}/ and updates brand.logo_url."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Folders",
+      "item": [
+        {
+          "name": "List Root Folders",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/folders",
+            "description": "Root folders (parent_id null)."
+          }
+        },
+        {
+          "name": "List Child Folders",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/folders?parent_id={{folderId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "folders"],
+              "query": [
+                { "key": "parent_id", "value": "{{folderId}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Root Folder",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.folder && data.folder.id) pm.collectionVariables.set('folderId', String(data.folder.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Campaigns\"\n}"
+            },
+            "url": "{{baseUrl}}/api/folders",
+            "description": "Saves folderId collection variable."
+          }
+        },
+        {
+          "name": "Create Child Folder",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.folder && data.folder.id) pm.collectionVariables.set('childFolderId', String(data.folder.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Social\",\n  \"parent_id\": {{folderId}}\n}"
+            },
+            "url": "{{baseUrl}}/api/folders",
+            "description": "Max depth 3. Requires folderId from Create Root Folder."
+          }
+        },
+        {
+          "name": "Update Folder",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "PATCH",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Campaigns Renamed\"\n}"
+            },
+            "url": "{{baseUrl}}/api/folders/{{folderId}}"
+          }
+        },
+        {
+          "name": "Delete Folder (Drive-style soft delete)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "DELETE",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/folders/{{folderId}}",
+            "description": "Soft-deletes folder, nested folders, and assets inside."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Assets",
+      "item": [
+        {
+          "name": "List Assets (current folder)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/assets?folder_id={{folderId}}&sort=updated_desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "assets"],
+              "query": [
+                { "key": "folder_id", "value": "{{folderId}}" },
+                { "key": "sort", "value": "updated_desc", "description": "updated_desc | name_asc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Assets (root / no folder)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/assets?folder_id=&sort=name_asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "assets"],
+              "query": [
+                { "key": "folder_id", "value": "" },
+                { "key": "sort", "value": "name_asc" }
+              ]
+            },
+            "description": "Empty folder_id = assets with no folder."
+          }
+        },
+        {
+          "name": "Search Assets",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/assets?q=Hero&sort=updated_desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "assets"],
+              "query": [
+                { "key": "q", "value": "Hero" },
+                { "key": "sort", "value": "updated_desc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Asset",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json();",
+                  "  if (data.asset && data.asset.id) pm.collectionVariables.set('assetId', String(data.asset.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": [] },
+                { "key": "folder_id", "value": "{{folderId}}", "type": "text" }
+              ]
+            },
+            "url": "{{baseUrl}}/api/assets",
+            "description": "Multipart upload. Name defaults to original filename; duplicates become name (1).ext. Type is detected from the file. folder_id optional."
+          }
+        },
+        {
+          "name": "Update Asset (move / rename)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "Hero Banner Updated", "type": "text" },
+                { "key": "file", "type": "file", "src": [], "description": "Optional — replace file and re-detect type" },
+                { "key": "folder_id", "value": "", "type": "text", "description": "Empty = root" }
+              ]
+            },
+            "url": "{{baseUrl}}/api/assets/{{assetId}}",
+            "description": "POST multipart (file uploads need POST). Omit file to rename only. Empty folder_id moves to root."
+          }
+        },
+        {
+          "name": "Trash Asset",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/assets/{{assetId}}/trash"
+          }
+        },
+        {
+          "name": "List Trash",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/assets?trash=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "assets"],
+              "query": [
+                { "key": "trash", "value": "1" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Restore Asset",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": "{{baseUrl}}/api/assets/{{assetId}}/restore"
+          }
+        }
+      ]
+    }
+  ]
+}
