@@ -1,6 +1,5 @@
 FROM php:8.4-fpm
 
-# Install required packages
 RUN apt-get update && apt-get install -y \
     nginx \
     git \
@@ -13,9 +12,11 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libxml2-dev \
     libicu-dev \
+    libpq-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install \
-        pdo_mysql \
+        pdo_pgsql \
+        pgsql \
         mbstring \
         exif \
         pcntl \
@@ -23,32 +24,35 @@ RUN apt-get update && apt-get install -y \
         gd \
         zip \
         intl \
+        opcache \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Laravel application directory
 WORKDIR /var/www/html
 
-# Copy Laravel project
-COPY . .
-
-# Install Laravel dependencies
+COPY composer.json composer.lock ./
 RUN composer install \
     --no-dev \
+    --no-scripts \
     --optimize-autoloader \
-    --no-interaction
+    --no-interaction \
+    --prefer-dist
 
-# Laravel permissions
-RUN chown -R www-data:www-data storage bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
+COPY . .
 
-# Copy Nginx configuration
+RUN composer dump-autoload --optimize --no-dev \
+    && mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache \
+    && php artisan package:discover --ansi || true
+
 COPY docker/nginx.conf /etc/nginx/sites-available/default
+RUN ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default \
+    && rm -f /etc/nginx/sites-enabled/default.bak \
+    && sed -i 's/listen = .*/listen = 127.0.0.1:9000/' /usr/local/etc/php-fpm.d/www.conf
 
-# Render uses port 10000 by default
 EXPOSE 10000
 
-# Start PHP-FPM and Nginx
-CMD ["sh", "-c", "php-fpm -D && nginx -g 'daemon off;'"]
+# Render: env vars injected at runtime. Cache config after boot when APP_KEY is present.
+CMD ["sh", "-c", "php-fpm -D && php artisan config:cache || true && php artisan route:cache || true && php artisan storage:link || true && nginx -g 'daemon off;'"]
